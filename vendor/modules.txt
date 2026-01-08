@@ -13,6 +13,9 @@ github.com/therecipe/qt
 github.com/therecipe/qt/core
 github.com/therecipe/qt/gui
 github.com/therecipe/qt/internal
+github.com/therecipe/qt/internal/binding/parser
+github.com/therecipe/qt/internal/binding/runtime
+github.com/therecipe/qt/internal/binding/templater
 github.com/therecipe/qt/interop/gow
 github.com/therecipe/qt/network
 github.com/therecipe/qt/qml
@@ -21,7 +24,7 @@ github.com/therecipe/qt/svg
 github.com/therecipe/qt/widgets
 # github.com/therecipe/qt/internal/binding/files/docs/5.13.0 v0.0.0-20200904063919-c0c124a5770d
 ## explicit
-# golang.org/x/sys v0.19.0
-## explicit; go 1.18
+# golang.org/x/sys v0.40.0
+## explicit; go 1.24.0
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry

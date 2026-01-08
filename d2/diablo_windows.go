@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -106,7 +107,15 @@ func launch(path string, flags []string, done chan execState) (*int, error) {
 // configureForOS will set specific configurations, such as compatibility mode.
 func configureForOS(path string) error {
 	// The key name is the localized path for the Diablo II directory.
-	keyName := fmt.Sprintf("%s\\%s", localizePath(path), "Game.exe")
+	// For registry operations, we need absolute paths to ensure consistency
+	// across different Windows language packs.
+	localizedPath := localizePath(path)
+	absPath, err := filepath.Abs(localizedPath)
+	if err != nil {
+		// If absolute path resolution fails, use the localized path as fallback
+		absPath = localizedPath
+	}
+	keyName := fmt.Sprintf("%s\\%s", absPath, "Game.exe")
 
 	// Open the compatibility key directory.
 	compatibilityKey, err := registry.OpenKey(registry.CURRENT_USER,
@@ -133,7 +142,14 @@ func configureForOS(path string) error {
 // applyDEP will run a fix to disable DEP.
 func applyDEP(path string) error {
 	// The key name is the localized path for the Diablo II directory.
-	keyName := fmt.Sprintf("%s\\%s", localizePath(path), "Diablo II.exe")
+	// For registry operations, we need absolute paths to ensure consistency
+	// across different Windows language packs.
+	localizedPath := localizePath(path)
+	absPath, err := filepath.Abs(localizedPath)
+	if err != nil {
+		// If absolute path resolution fails, use the localized path as fallback
+		absPath = localizedPath
+	}
 
 	// Open the dep key directory.
 	depKey, err := registry.OpenKey(registry.CURRENT_USER,
@@ -143,15 +159,23 @@ func applyDEP(path string) error {
 	if err != nil {
 		return err
 	}
+	defer depKey.Close()
 
-	// Set the value to disable DEP.
-	if err := depKey.SetStringValue(keyName, "DisableNXShowUI"); err != nil {
-		return err
+	// List of executables to apply DEP to
+	executables := []string{"Diablo II.exe", "Game.exe"}
+
+	// Check if Plugy.exe exists and add it to the list
+	plugyPath := filepath.Join(absPath, "Plugy.exe")
+	if _, err := os.Stat(plugyPath); err == nil {
+		executables = append(executables, "Plugy.exe")
 	}
 
-	// Close the registry when we're done.
-	if err := depKey.Close(); err != nil {
-		return err
+	// Apply DEP to each executable
+	for _, exe := range executables {
+		keyName := fmt.Sprintf("%s\\%s", absPath, exe)
+		if err := depKey.SetStringValue(keyName, "DisableNXShowUI"); err != nil {
+			return fmt.Errorf("failed to set DEP for %s: %w", exe, err)
+		}
 	}
 
 	return nil

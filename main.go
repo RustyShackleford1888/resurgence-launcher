@@ -30,14 +30,14 @@ func main() {
 	var (
 		debugMode    = envBool("DEBUG_MODE", true)
 		environment  = envString("ENVIRONMENT", "production")
-		buildVersion = envString("BUILD_VERSION", "v1.2.0")
+		buildVersion = envString("BUILD_VERSION", "v1.2.5")
 	)
 
 	// Set app context.
 	core.QCoreApplication_SetApplicationName("Resurgence Launcher")
 	core.QCoreApplication_SetOrganizationName("SlashdiabloResurgence")
 	core.QCoreApplication_SetOrganizationDomain("https://resurgence.slashgaming.net/")
-	core.QCoreApplication_SetApplicationVersion("1.2.0")
+	core.QCoreApplication_SetApplicationVersion("1.2.5")
 
 	// Enable high DPI scaling
 	core.QCoreApplication_SetAttribute(core.Qt__AA_EnableHighDpiScaling, true)

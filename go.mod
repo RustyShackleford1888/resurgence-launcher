@@ -1,12 +1,12 @@
 module github.com/DoctorWoot420/resurgence-launcher
 
-go 1.18
+go 1.24.0
 
 require (
 	github.com/google/uuid v1.6.0
 	github.com/nokka/goqmlframeless v1.1.0
 	github.com/therecipe/qt v0.0.0-20200904063919-c0c124a5770d
-	golang.org/x/sys v0.19.0
+	golang.org/x/sys v0.40.0
 )
 
 require (
