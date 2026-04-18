@@ -55,6 +55,7 @@ func (s *service) SetMaphackTextData(gameIndex int) error {
 		DefaultGameName: g.MaphackDefaultGameName,
 		DefaultPassword: g.MaphackDefaultPassword,
 		RuneDesign:      g.MaphackRuneDesign,
+		ItemNameOption:  g.MaphackItemNameOption,
 		FilterBlocks:    g.MaphackFilterBlocks,
 	}
 
@@ -99,12 +100,13 @@ func (s *service) updateBHConfig(location string, bytes []byte) error {
 	var jsonData map[string]string
 	if err := json.Unmarshal(bytes, &jsonData); err != nil {
 		s.logger.Debug(fmt.Sprintf("Failed to unmarshal JSON: %v", err))
+		s.logger.Debug(fmt.Sprintf("Raw JSON data: %s", string(bytes))) // Output the raw JSON
 		return err
 	}
 
 	configContent, ok := jsonData["config"]
 	if !ok {
-		return fmt.Errorf("config field not found in the JSON data")
+		return fmt.Errorf("config field not found in the JSON data: %s", string(bytes)) // Output the full JSON
 	}
 
 	configContent = strings.ReplaceAll(configContent, "\\n", "\n")
@@ -152,9 +154,17 @@ func (s *service) updateBHSettings(location string, params bhconfig.Payload) err
 }
 
 func cleanLocation(location string) string {
+	if strings.HasPrefix(location, "\\\\") {
+		return filepath.Clean(location)
+	}
+
+	if filepath.IsAbs(location) {
+		return filepath.Clean(filepath.FromSlash(location))
+	}
+
 	location = strings.TrimPrefix(location, "\\")
 	location = strings.TrimPrefix(location, "/")
-	return filepath.FromSlash(location)
+	return filepath.Clean(filepath.FromSlash(location))
 }
 
 func extractCustomBuildLines(content string) (string, error) {

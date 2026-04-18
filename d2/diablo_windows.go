@@ -9,24 +9,11 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
 	"golang.org/x/sys/windows/registry"
 )
-
-// SHA1 of the different versions of Diablo Game.exe.
-var hashList = map[string]string{
-	"a875b98fa3a8b9300bcc04c84be1fa057eb277b5": "1.12",
-	"af2b33c90b50ede8d9a8bca9b8d9720c87f78641": "1.13c",
-	"27ddadbc457affed122564ae7a4bd2223181e15a": "1.13c", // Custom 1.13c build with HD icon.
-	"11cd918cb6906295769d9be1b3e349e02af6b229": "1.13d",
-	"3e64f12c6ef72847f49d301c2472280d4460589d": "1.14a",
-	"11e940266c6838414c2114c2172227f982d4054e": "1.14b",
-	"255691dd53e3bcd646e5c6e1e2e7b16da745b706": "1.14c",
-	"af0ea93d2a652ceb11ac01ee2e4ae1ef613444c2": "1.14d",
-}
 
 const (
 	// ModMaphackIdentifier is the identifier we use to look for installs of maphack.
@@ -107,15 +94,7 @@ func launch(path string, flags []string, done chan execState) (*int, error) {
 // configureForOS will set specific configurations, such as compatibility mode.
 func configureForOS(path string) error {
 	// The key name is the localized path for the Diablo II directory.
-	// For registry operations, we need absolute paths to ensure consistency
-	// across different Windows language packs.
-	localizedPath := localizePath(path)
-	absPath, err := filepath.Abs(localizedPath)
-	if err != nil {
-		// If absolute path resolution fails, use the localized path as fallback
-		absPath = localizedPath
-	}
-	keyName := fmt.Sprintf("%s\\%s", absPath, "Game.exe")
+	keyName := fmt.Sprintf("%s\\%s", localizePath(path), "Game.exe")
 
 	// Open the compatibility key directory.
 	compatibilityKey, err := registry.OpenKey(registry.CURRENT_USER,
@@ -142,14 +121,7 @@ func configureForOS(path string) error {
 // applyDEP will run a fix to disable DEP.
 func applyDEP(path string) error {
 	// The key name is the localized path for the Diablo II directory.
-	// For registry operations, we need absolute paths to ensure consistency
-	// across different Windows language packs.
-	localizedPath := localizePath(path)
-	absPath, err := filepath.Abs(localizedPath)
-	if err != nil {
-		// If absolute path resolution fails, use the localized path as fallback
-		absPath = localizedPath
-	}
+	keyName := fmt.Sprintf("%s\\%s", localizePath(path), "Diablo II.exe")
 
 	// Open the dep key directory.
 	depKey, err := registry.OpenKey(registry.CURRENT_USER,
@@ -159,23 +131,15 @@ func applyDEP(path string) error {
 	if err != nil {
 		return err
 	}
-	defer depKey.Close()
 
-	// List of executables to apply DEP to
-	executables := []string{"Diablo II.exe", "Game.exe"}
-
-	// Check if Plugy.exe exists and add it to the list
-	plugyPath := filepath.Join(absPath, "Plugy.exe")
-	if _, err := os.Stat(plugyPath); err == nil {
-		executables = append(executables, "Plugy.exe")
+	// Set the value to disable DEP.
+	if err := depKey.SetStringValue(keyName, "DisableNXShowUI"); err != nil {
+		return err
 	}
 
-	// Apply DEP to each executable
-	for _, exe := range executables {
-		keyName := fmt.Sprintf("%s\\%s", absPath, exe)
-		if err := depKey.SetStringValue(keyName, "DisableNXShowUI"); err != nil {
-			return fmt.Errorf("failed to set DEP for %s: %w", exe, err)
-		}
+	// Close the registry when we're done.
+	if err := depKey.Close(); err != nil {
+		return err
 	}
 
 	return nil

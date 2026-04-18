@@ -7,12 +7,14 @@ Item {
     property var game: {}
     property bool depApplied: false
     property bool depError: false
+    property bool isWindows: Qt.platform.os === "windows"
     property int activeHDIndex: 0
     property int activeMaphackIndex: 0
     property int activeMaphackDefaultGsIndex: 0
     property string activeMaphackDefaultGameName: ""
     property string activeMaphackDefaultPassword: ""
     property int activeMaphackRuneDesignIndex: 0
+    property int activeMaphackItemNameOptionIndex: 0
     property int boxHeight: 58
 
     function setGame(current) {
@@ -32,6 +34,7 @@ Item {
         updateMaphackDefaultGameName(current)
         updateMaphackDefaultPassword(current)
         updateMaphackRuneDesign(current)
+        updateMaphackItemNameOption(current)
         updateMaphackFilterBlocks(current)
     }
 
@@ -129,6 +132,24 @@ Item {
         maphackRuneDesign.currentIndex = 0
     }
 
+    // updateMaphackItemNameOption will set the correct index of the item name options
+    function updateMaphackItemNameOption(current) {
+        if(settings.availableItemNameOptions.length > 0) {
+            // Find the correct index.
+            for(var i = 0; i < settings.availableItemNameOptions.length; i++) {
+                if(settings.availableItemNameOptions[i].toLowerCase() == current.maphack_item_name_option.toLowerCase()) {
+                    activeMaphackItemNameOptionIndex = i
+                    maphackItemNameOption.currentIndex = i
+                    return
+                }
+            }
+        }
+
+        // Default to first index in list.
+        activeMaphackItemNameOptionIndex = 0
+        maphackItemNameOption.currentIndex = 0
+    }
+
     // updateMaphackFilterBlocks will set the correct values of the filter blocks
     function updateMaphackFilterBlocks(current) {
         if(current.maphack_filter_blocks != null) {
@@ -211,6 +232,18 @@ Item {
         return maphackFilterBlocks
     }
 
+    function normalizeLocalPath(fileUrl) {
+        var path = fileUrl.toString()
+        if(path.indexOf("file://") === 0) {
+            path = decodeURIComponent(path.substring(7))
+            if(isWindows && path.charAt(0) === "/") {
+                path = path.substring(1)
+            }
+        }
+
+        return path
+    }
+
     function updateGameModel() {
         if(game != undefined) {
             var body = {
@@ -224,6 +257,7 @@ Item {
                 maphack_default_game_name: maphackDefaultGameName.text,
                 maphack_default_password: maphackDefaultPassword.text,
                 maphack_rune_design: maphackRuneDesign.currentText,
+                maphack_item_name_option: maphackItemNameOption.currentText,
                 maphack_filter_blocks: makeBlockList(),
             }
             
@@ -318,8 +352,7 @@ Item {
                                     folder: shortcuts.home
                                     
                                     onAccepted: {
-                                        var path = d2PathDialog.fileUrl.toString()
-                                        path = path.replace(/^(file:\/{2})/,"")
+                                        var path = normalizeLocalPath(d2PathDialog.fileUrl)
                                         d2pathInput.text = path
                                         
                                         // Update the game model.
@@ -334,7 +367,8 @@ Item {
                         // Flags box.
                         Item {
                             Layout.preferredWidth: settingsLayout.width
-                            Layout.preferredHeight: boxHeight
+                            Layout.preferredHeight: isWindows ? boxHeight : 0
+                            visible: isWindows
 
                             Row {
                                 topPadding: 10
@@ -703,6 +737,47 @@ Item {
                                         id: maphackRuneDesign
                                         currentIndex: activeMaphackRuneDesignIndex
                                         model: settings.availableRuneDesigns
+                                        height: 30
+                                        width: 140
+
+                                        onActivated: updateGameModel()
+                                    }
+                                } 
+                            }
+                            
+                            Separator{}
+                        }
+
+                        // Item Names Dropdown
+                        Item {
+                            Layout.preferredWidth: settingsLayout.width
+                            Layout.preferredHeight: boxHeight
+
+                            Row {
+                                topPadding: 10
+
+                                Column {
+                                    width: (settingsLayout.width - includeMaphackItemNameOption.width)
+                                    Title {
+                                        text: "ITEM NAMES"
+                                        font.pixelSize: 13
+                                    }
+
+                                    SText {
+                                        text: "Replace item names with key stats"
+                                        font.pixelSize: 11
+                                        topPadding: 5
+                                        color: "#676767"
+                                    }
+                                }
+                                Column {
+                                    id: includeMaphackItemNameOption
+                                    width: 140
+
+                                    Dropdown{
+                                        id: maphackItemNameOption
+                                        currentIndex: activeMaphackItemNameOptionIndex
+                                        model: settings.availableItemNameOptions
                                         height: 30
                                         width: 140
 
